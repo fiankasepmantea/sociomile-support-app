@@ -11,12 +11,11 @@ export const AuthProvider = ({ children }) => {
   });
   const [tenant, setTenant] = useState(() => localStorage.getItem("tenant") || "test-tenant");
 
-  // Fungsi login
   const login = async (email, password, tenantId) => {
     const res = await client.post(
       "/auth/login",
       { email, password },
-      { headers: { "X-Tenant-ID": tenantId } } // kirim header sesuai tenant
+      { headers: { "X-Tenant-ID": tenantId } }
     );
 
     // Simpan data ke localStorage & state

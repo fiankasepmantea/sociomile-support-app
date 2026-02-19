@@ -1,19 +1,20 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import "../assets/styles/login.css";
-
+import { useNavigate } from "react-router-dom";
 export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState(""); 
   const [password, setPassword] = useState(""); 
-  const [tenantId, setTenantId] = useState("test-tenant"); // default sesuai DB
+  const [tenantId, setTenantId] = useState("test-tenant");
   const [error, setError] = useState("");
-
+  const navigate = useNavigate();
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     try {
-      await login(email, password, tenantId); // kirim X-Tenant-ID sesuai DB
+      await login(email, password, tenantId);
+      navigate("/dashboard"); 
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || "Login failed");
