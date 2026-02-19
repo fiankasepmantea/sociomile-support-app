@@ -5,97 +5,85 @@ import (
 	"strings"
 
 	"backend/internal/appcontext"
-	"backend/internal/apperrors"
 	"backend/internal/model"
+	"backend/internal/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
-func AuthMiddleware(db *gorm.DB, jwtSecret string) gin.HandlerFunc {
+func AuthMiddleware(db *gorm.DB, jwtSecret string, bl utils.BlacklistStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get token from Authorization header
+
+		// ---------- HEADER ----------
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header required"})
 			c.Abort()
 			return
 		}
 
-		// Extract token (Bearer <token>)
-		parts := strings.Split(authHeader, " ")
+		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization format"})
 			c.Abort()
 			return
 		}
-		tokenString := parts[1]
 
-		// Parse and validate JWT
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, apperrors.ErrUnauthorized("invalid signing method")
+		tokenStr := parts[1]
+
+		if bl != nil {
+			blocked, _ := bl.IsBlacklisted(c.Request.Context(), tokenStr)
+			if blocked {
+				c.JSON(401, gin.H{"error": "token logged out"})
+				c.Abort()
+				return
 			}
+		}
+		// ---------- PARSE TOKEN ----------
+		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
 			return []byte(jwtSecret), nil
 		})
 
 		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 			c.Abort()
 			return
 		}
 
-		// Extract claims
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			c.Abort()
-			return
-		}
+		claims := token.Claims.(jwt.MapClaims)
 
-		// Get user ID, tenant ID, role from claims
-		userID, ok := claims["user_id"].(float64)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user_id in token"})
-			c.Abort()
-			return
-		}
+		userID := uint(claims["user_id"].(float64))
+		tenantID := uint(claims["tenant_id"].(float64))
+		role := claims["role"].(string)
 
-		tenantID, ok := claims["tenant_id"].(float64)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid tenant_id in token"})
-			c.Abort()
-			return
-		}
-
-		role, ok := claims["role"].(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid role in token"})
-			c.Abort()
-			return
-		}
-
-		// Verify user exists and active in this tenant
+		// ---------- LOAD USER ----------
 		var user model.User
-		if err := db.Where("id = ? AND tenant_id = ? AND is_active = true AND deleted_at IS NULL",
-			uint(userID), uint(tenantID)).First(&user).Error; err != nil {
+		if err := db.
+			Where("id = ? AND tenant_id = ? AND is_active = true AND deleted_at IS NULL",
+				userID, tenantID).
+			First(&user).Error; err != nil {
 
 			if err == gorm.ErrRecordNotFound {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found or inactive"})
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
 			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "database error"})
 			}
 			c.Abort()
 			return
 		}
 
-		// Inject full AppContext into request context
+		// ---------- CONTEXT ----------
 		ctx := appcontext.WithAppContext(c.Request.Context(), &appcontext.AppContext{
-			UserID:   uint(userID),
-			TenantID: uint(tenantID),
+			UserID:   userID,
+			TenantID: tenantID,
 			Role:     role,
 		})
 		c.Request = c.Request.WithContext(ctx)
+
+		// ⭐ supaya /me jalan
+		c.Set("user", user)
 
 		c.Next()
 	}

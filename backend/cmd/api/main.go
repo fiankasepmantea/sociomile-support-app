@@ -34,7 +34,7 @@ func main() {
 	redisClient := cache.NewRedis(cfg)
 
 	// SERVICES
-	authService := service.NewAuthService(repo, cfg.JWTSecret, cfg.JWTExpiryHours)
+	authService := service.NewAuthService(repo, cfg.JWTSecret, cfg.JWTExpiryHours, redisClient)
 	convService := service.NewConversationService(repo)
 	messageService := service.NewMessageService(repo)
 	customerService := service.NewCustomerService(repo)
@@ -78,7 +78,7 @@ func main() {
 	// ---------- PROTECTED ----------
 	protected := api.Group("")
 	protected.Use(middleware.TenantMiddleware(db.DB))
-	protected.Use(middleware.AuthMiddleware(db.DB, cfg.JWTSecret))
+	protected.Use(middleware.AuthMiddleware(db.DB, cfg.JWTSecret, redisClient))
 
 	protected.POST("/logout", authHandler.Logout)
 	protected.GET("/me", authHandler.Me)

@@ -21,11 +21,12 @@ type AuthService struct {
 	jwtExpiry int
 }
 
-func NewAuthService(repo *pg.Repository, jwtSecret string, jwtExpiryHours int) *AuthService {
+func NewAuthService(repo *pg.Repository, jwtSecret string, jwtExpiryHours int, redis *cache.Redis) *AuthService {
 	return &AuthService{
 		repo:      repo,
 		jwtSecret: jwtSecret,
 		jwtExpiry: jwtExpiryHours,
+		redis: redis,
 	}
 }
 
@@ -95,10 +96,27 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 }
 
 func (s *AuthService) Logout(ctx context.Context, token string) {
+
 	if s.redis == nil {
 		return
 	}
 
-	key := "jwt:blacklist:" + token
-	s.redis.Client.Set(ctx, key, "1", 24*time.Hour)
+	claims, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+		return []byte(s.jwtSecret), nil
+	})
+	if err != nil || !claims.Valid {
+		return
+	}
+
+	mapClaims := claims.Claims.(jwt.MapClaims)
+
+	expUnix := int64(mapClaims["exp"].(float64))
+	ttl := time.Until(time.Unix(expUnix, 0))
+
+	if ttl <= 0 {
+		return
+	}
+
+	s.redis.BlacklistToken(ctx, token, ttl)
 }
+

@@ -33,3 +33,23 @@ func NewRedis(cfg *config.Config) *Redis {
 	log.Println("✅ Redis connected")
 	return &Redis{Client: rdb}
 }
+
+func (r *Redis) BlacklistToken(ctx context.Context, token string, ttl time.Duration) error {
+	if r == nil || r.Client == nil {
+		return nil
+	}
+	key := "jwt:blacklist:" + token
+	return r.Client.Set(ctx, key, "1", ttl).Err()
+}
+
+func (r *Redis) IsBlacklisted(ctx context.Context, token string) (bool, error) {
+	if r == nil || r.Client == nil {
+		return false, nil
+	}
+	key := "jwt:blacklist:" + token
+	val, err := r.Client.Exists(ctx, key).Result()
+	if err != nil {
+		return false, err
+	}
+	return val == 1, nil
+}

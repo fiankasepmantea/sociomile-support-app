@@ -2,10 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"backend/internal/apperrors"
 	"backend/internal/service"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -50,8 +52,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
+
+	auth := c.GetHeader("Authorization")
+	if auth == "" {
+		c.JSON(401, gin.H{"error": "missing auth header"})
+		return
+	}
+
+	token := strings.TrimPrefix(auth, "Bearer ")
+	h.authService.Logout(c.Request.Context(), token)
+
 	c.JSON(200, gin.H{"message": "logged out"})
 }
+
 func (h *AuthHandler) Me(c *gin.Context) {
 	user, exists := c.Get("user")
 	if !exists {
@@ -60,3 +73,4 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	}
 	c.JSON(200, user)
 }
+
