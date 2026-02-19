@@ -27,7 +27,7 @@ func ToTenantResponse(t *model.Tenant) *TenantResponse {
 	}
 
 	return &TenantResponse{
-		ID:        t.ID,
+		ID:        uint(t.ID),
 		Name:      t.Name,
 		CreatedAt: t.CreatedAt,
 		UpdatedAt: t.UpdatedAt,
@@ -52,8 +52,8 @@ func ToCustomerResponse(c *model.Customer) *CustomerResponse {
 	}
 
 	return &CustomerResponse{
-		ID:         c.ID,
-		TenantID:   c.TenantID,
+		ID:         uint(c.ID),
+		TenantID:   uint(c.TenantID),
 		ExternalID: c.ExternalID,
 		Name:       name,
 		CreatedAt:  c.CreatedAt,

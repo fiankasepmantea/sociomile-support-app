@@ -1,9 +1,18 @@
 package model
 
-import "time"
+import (
+    "time"
+    "gorm.io/gorm"
+)
+
 type Tenant struct {
-	ID        uint      `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+    ID        uint64         `gorm:"primaryKey;column:id"`
+    Name      string         `gorm:"column:name;unique;not null"`
+    CreatedAt time.Time      `gorm:"column:created_at"`
+    UpdatedAt time.Time      `gorm:"column:updated_at"`
+    DeletedAt gorm.DeletedAt `gorm:"column:deleted_at;index"`
+}
+
+func (Tenant) TableName() string {
+    return "tenants"
 }
