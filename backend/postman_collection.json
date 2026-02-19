@@ -1,0 +1,101 @@
+{
+  "info": {
+    "name": "Sociomile Support API",
+    "_postman_id": "support-api",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base", "value": "http://localhost:8080" },
+    { "key": "tenant", "value": "test-tenant" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" }
+        ],
+        "url": "{{base}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\":\"agent@gmail.com\",\"password\":\"agent123\"}"
+        }
+      }
+    },
+
+    {
+      "name": "Webhook Channel",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" }
+        ],
+        "url": "{{base}}/api/webhooks/channel",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"external_customer_id\":\"cust-001\",\"customer_name\":\"Budi\",\"message_body\":\"Hello\"}"
+        }
+      }
+    },
+
+    {
+      "name": "List Conversations",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{base}}/api/conversations"
+      }
+    },
+
+    {
+      "name": "Assign Agent",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{base}}/api/conversations/1/assign",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"agent_id\":1}"
+        }
+      }
+    },
+
+    {
+      "name": "Send Agent Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{base}}/api/conversations/1/messages",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"body\":\"reply from agent\"}"
+        }
+      }
+    },
+
+    {
+      "name": "List Messages",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-Tenant-ID", "value": "{{tenant}}" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{base}}/api/conversations/1/messages"
+      }
+    }
+
+  ]
+}

@@ -1,0 +1,73 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sociomile-postgres
+    environment:
+      POSTGRES_DB: support_platform_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    ports:
+      - "54322:5432"  # host:container
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d support_platform_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sociomile-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sociomile-redis
+    ports:
+      - "6389:6379"  # host 6389 → container 6379 (default Redis port)
+    networks:
+      - sociomile-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sociomile-app
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=development
+      - SERVER_PORT=8080
+
+      - JWT_SECRET=b5e8511680a1d0bc2f541a30dc3a425f8e3dcdf1a45eeb330cb4c38e5f3b4020
+
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=root
+      - DB_NAME=support_platform_db
+      - DB_SSLMODE=disable
+
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379     # match container's Redis port
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+
+      - JWT_EXPIRY_HOURS=24
+      - WEBHOOK_RATE_LIMIT=100
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - sociomile-network
+
+volumes:
+  pgdata:
+
+networks:
+  sociomile-network:
+    driver: bridge
