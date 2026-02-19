@@ -1,0 +1,43 @@
+.navbar {
+  background-color: #4f46e5;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.navbar a {
+  color: white;
+  margin-left: 15px;
+  font-weight: 500;
+}
+
+.navbar a:hover,
+.navbar a.active-link {
+  text-decoration: underline;
+  font-weight: bold;
+}
+
+.navbar button {
+  background-color: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.navbar button:hover {
+  text-decoration: underline;
+}
